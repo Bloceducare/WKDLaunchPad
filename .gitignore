@@ -1,6 +1,8 @@
 # Compiler files
 cache/
 out/
+lib/
+.github/workflows/test.yml
 
 # Ignores development broadcast logs
 !/broadcast
