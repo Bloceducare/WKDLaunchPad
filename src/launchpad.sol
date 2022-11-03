@@ -96,9 +96,7 @@ contract Launchpad is Ownable {
     error NotDeposited();
     error NoWKDCommit();
     error NotEnoughOfferingToken();
-    error NotEnoughBNB();
-    error NotEnoughWKDCommit();
-    error NotEnoughTime();
+
 
 
     function initialize(
