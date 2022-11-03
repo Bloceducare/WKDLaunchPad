@@ -12,9 +12,18 @@ contract LaunchpadDeployer is Ownable {
         uint256 _startBlock,
         uint256 _endBlock,
         address _adminAddress,
-        address _wkdCommit
+        address _projectOwner,
+        address _wkdCommit,
+        uint256 _offeringAmount,
+        uint256 _raisingAmount,
+        uint256 _launchPercentShare,
+        uint256 _tier2Percentage,
+        uint256 _minimumRequirementForTier2
     ) external onlyOwner {
-        require(IBEP20(_offeringToken).totalSupply() > 0, "Invalid token address");
+        require(
+            IBEP20(_offeringToken).totalSupply() > 0,
+            "Invalid token address"
+        );
         require(_startBlock > block.number, "Invalid start block");
         require(_endBlock > _startBlock, "Invalid end block");
         require(_adminAddress != address(0), "Invalid admin address");
@@ -23,18 +32,38 @@ contract LaunchpadDeployer is Ownable {
         bytes32 salt = keccak256(abi.encodePacked(_offeringToken, _startBlock));
         address payable launchpadAddress;
         assembly {
-            launchpadAddress := create2(0, add(bytecode, 32), mload(bytecode), salt)
+            launchpadAddress := create2(
+                0,
+                add(bytecode, 32),
+                mload(bytecode),
+                salt
+            )
         }
-        Launchpad(launchpadAddress).initialize(_offeringToken, _startBlock, _endBlock, _adminAddress, _wkdCommit);
+        Launchpad(launchpadAddress).initialize(
+            _offeringToken,
+            _startBlock,
+            _endBlock,
+            _adminAddress,
+            _projectOwner,
+            _wkdCommit,
+            _offeringAmount,
+            _raisingAmount,
+            _launchPercentShare,
+            _tier2Percentage,
+            _minimumRequirementForTier2
+        );
         emit NewIFOContract(launchpadAddress);
     }
-     /**
+
+    /**
      * @notice It allows the admin to recover wrong tokens sent to the contract
      * @param _tokenAddress: the address of the token to withdraw
      * @dev This function is only callable by admin.
      */
     function recoverWrongTokens(address _tokenAddress) external onlyOwner {
-        uint256 balanceToRecover = IBEP20(_tokenAddress).balanceOf(address(this));
+        uint256 balanceToRecover = IBEP20(_tokenAddress).balanceOf(
+            address(this)
+        );
         require(balanceToRecover > 0, "Operations: Balance must be > 0");
         IBEP20(_tokenAddress).transfer(address(msg.sender), balanceToRecover);
 

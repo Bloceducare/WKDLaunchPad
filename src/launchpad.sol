@@ -26,13 +26,14 @@ contract Launchpad is Ownable {
     // Participants
     address[] public participants;
     // Pools details
-    poolCharacteristics public poolsInfo;
+    LaunchpadDetails public launchPadInfo;
     // launchpads share in amount raised
     uint256 public launchPercentShare;
     // Project owner's address
     address public projectOwner;
 
-    struct poolCharacteristics {
+
+    struct LaunchpadDetails {
         // amount to be raised in BNB
         uint256 raisingAmount;
         // offerinn token
@@ -74,172 +75,163 @@ contract Launchpad is Ownable {
         uint256 StartBlock,
         uint256 EndBlock,
         address admin,
-        address wkdCommit
-    );
-    event Harvest(address indexed user, uint256 offeringTokenAmount);
-    event PoolSet( // solhint-disable-next-line func-name-mixedcase
+        address wkdCommit, 
         uint256 raisingAmount,
-        address offeringToken,
-        uint256 offeringAmount,
-        uint256 minimumRequirementForTier2,
-        uint256 launchpadStartTime,
-        uint256 launchpadEndTime,
-        uint256 tier1Amount,
-        uint256 tier2Amount
+        uint256 offeringAmount
+        
     );
+    event ProjectWithdraw(address indexed projectOwner, uint256 amount);
+    event Claimed(address indexed user, uint256 offeringTokenAmount);
+    event FinalWithdraw(address admin, uint256 BNBAmount, uint256 offeringTokenAmount);
+    //  Custom errors
+    error NotAllowed();
+    error NotPermitted();
+    error NotInitialized();
+    error InvalidPercentage();
+    error NotStarted();
+    error NotEnded();
+    error TargetCompleted();
+    error AlreadyClaimed();
+    error NotEnoughAmount();
+    error NotDeposited();
+    error NoWKDCommit();
+    error NotEnoughOfferingToken();
+    error NotEnoughBNB();
+    error NotEnoughWKDCommit();
+    error NotEnoughTime();
+
 
     function initialize(
         address _offeringToken,
         uint256 _startBlock,
         uint256 _endBlock,
         address _adminAddress,
-        address _wkdCommit
-    ) public {
-        require(msg.sender == owner(), "Launchpad: FORBIDDEN");
-        require(!isInitialized, "Launchpad: already initialized");
-        offeringToken = IBEP20(_offeringToken);
-        isInitialized = true;
-        StartBlock = _startBlock;
-        EndBlock = _endBlock;
-        admin = _adminAddress;
-        wkdCommit = WKDCommit(_wkdCommit);
-        emit init(_offeringToken, _startBlock, _endBlock, _adminAddress, _wkdCommit);
-    }
-
-    function setPool(
+        address _projectOwner,
+        address _wkdCommit,
         uint256 _offeringAmount,
         uint256 _raisingAmount,
         uint256 _launchPercentShare,
         uint256 _tier2Percentage,
         uint256 _minimumRequirementForTier2
-        
     ) public {
-        require(msg.sender == admin, "Launchpad: only admin can set pool");
-        require(block.number < StartBlock, "Launchpad: Pool already started");
-        require(
-            _launchPercentShare <= 100,
-            "Launchpad: Launchpad share cannot be more than 100%"
-        );
-        require(
-            _tier2Percentage <= 100,
-            "Launchpad: Tier2 share cannot be more than 100%"
-        );
-        offeringToken.transferFrom(msg.sender, address(this), _offeringAmount);
-        require(
-            offeringToken.balanceOf(address(this)) >= _offeringAmount,
-            "Launchpad: insufficient offering token balance"
-        );
-        poolsInfo.offeringAmount = _offeringAmount;
-        poolsInfo.raisingAmount = _raisingAmount;
+        if(msg.sender != owner()) revert NotPermitted();
+        if(isInitialized) revert NotInitialized();
+        if(_launchPercentShare > 100) revert InvalidPercentage();
+        if(_tier2Percentage > 100) revert InvalidPercentage();
+        launchPadInfo.offeringAmount = _offeringAmount;
+        launchPadInfo.raisingAmount = _raisingAmount;
         launchPercentShare = _launchPercentShare;
-        poolsInfo.minimumRequirementForTier2 = _minimumRequirementForTier2;
+        launchPadInfo.minimumRequirementForTier2 = _minimumRequirementForTier2;
         tier2Percentage = _tier2Percentage;
         tier1Percentage = 100 - _tier2Percentage;
-        poolsInfo.tier2Amount = _offeringAmount *( _tier2Percentage / 100);
-        poolsInfo.tier1Amount = _offeringAmount * (100 - _tier2Percentage) / 100;
+        launchPadInfo.tier2Amount = _offeringAmount *( _tier2Percentage);
+        launchPadInfo.tier1Amount = _offeringAmount * (100 - _tier2Percentage) / 100;
        
-        emit PoolSet(
-            _raisingAmount,
-            address(offeringToken),
-            _offeringAmount,
-            _minimumRequirementForTier2,
-            StartBlock,
-            EndBlock,
-            poolsInfo.tier1Amount,
-            poolsInfo.tier2Amount
-        );
-
+        offeringToken = IBEP20(_offeringToken);
+        isInitialized = true;
+        StartBlock = _startBlock;
+        EndBlock = _endBlock;
+        admin = _adminAddress;
+        projectOwner = _projectOwner;
+        wkdCommit = WKDCommit(_wkdCommit);
+        emit init(_offeringToken, _startBlock, _endBlock, _adminAddress, _wkdCommit, _raisingAmount, _offeringAmount);
     }
 
     function deposit() public payable {
-        require(isInitialized, "Launchpad: Contract not initialized");
-        require(block.number >= StartBlock, "Launchpad: IFO has not started");
-        require(block.number <= EndBlock, "Launchpad: IFO has ended");
-        require(
-            poolsInfo.raisingAmount <= raisedAmount,
-            "Launchpad: Target completed"
-        );
+        if(!isInitialized) revert NotInitialized();
+        if(block.number < StartBlock) revert NotStarted();
+        if(block.number > EndBlock) revert NotEnded();
+        if(launchPadInfo.raisingAmount == raisedAmount) revert TargetCompleted();
         uint256 userCommit = wkdCommit.getUserCommit(msg.sender);
-        require(userCommit > 0, "Launchpad: No WKD commit");
-        require(msg.value > 0, "Launchpad: Amount must be greater than 0");
-
-        if (userCommit >= poolsInfo.minimumRequirementForTier2) {
+        if(userCommit == 0) revert NoWKDCommit();
+        if(msg.value == 0) revert NotEnoughAmount();
+        if (userCommit >= launchPadInfo.minimumRequirementForTier2) {
             user[msg.sender].userTier = userTiers.Tier2;
         } else {
             user[msg.sender].userTier = userTiers.Tier1;
         }
-        participants.push(msg.sender);
+        getUserDetails(msg.sender);
         user[msg.sender].amountDeposited += msg.value;
-        raisedAmount += msg.value;
+        participants.push(msg.sender);
+        user[msg.sender].amountDeposited = user[msg.sender].amountDeposited + msg.value;
+        raisedAmount = raisedAmount += msg.value;
         emit Deposit(msg.sender, msg.value);
     }
 
-    function harvestPool() public {
-        require(isInitialized, "Launchpad: Contract not initialized");
-        require(block.number >= EndBlock, "Launchpad: IFO has not ended");
-        require(
-            user[msg.sender].amountDeposited > 0,
-            "Launchpad: User has not deposited"
-        );
-        require(
-            !user[msg.sender].hasClaimed,
-            "Launchpad: User has already claimed"
-        );
-        if (user[msg.sender].userTier == userTiers.Tier1) {
-            uint256 offeringTokenAmount =
-                (user[msg.sender].amountDeposited/raisedAmount) * poolsInfo.tier1Amount;
-            offeringToken.transfer(msg.sender, offeringTokenAmount);
+    function claimToken() public {
+        if(!isInitialized) revert NotInitialized();
+        if(block.number < StartBlock) revert NotStarted();
+        if(block.number < EndBlock) revert NotEnded();
+        if(user[msg.sender].amountDeposited == 0) revert NotDeposited();
+        if(user[msg.sender].hasClaimed) revert AlreadyClaimed();
+        if(user[msg.sender].userTier == userTiers.Tier1) {
+            uint256 amount = launchPadInfo.tier1Amount * user[msg.sender].amountDeposited / launchPadInfo.raisingAmount;
+            offeringToken.transfer(msg.sender, amount);
             user[msg.sender].hasClaimed = true;
-            emit Harvest(msg.sender, offeringTokenAmount);
-        } else if (user[msg.sender].userTier == userTiers.Tier2) {
-            uint256 offeringTokenAmount =
-                (user[msg.sender].amountDeposited/raisedAmount) * poolsInfo.tier2Amount;
-            offeringToken.transfer(msg.sender, offeringTokenAmount);
+            emit Claimed(msg.sender, amount);
+        } else if(user[msg.sender].userTier == userTiers.Tier2) {
+            uint256 amount = launchPadInfo.tier2Amount * user[msg.sender].amountDeposited / launchPadInfo.raisingAmount;
+            offeringToken.transfer(msg.sender, amount);
             user[msg.sender].hasClaimed = true;
-            emit Harvest(msg.sender, offeringTokenAmount);
+            emit Claimed(msg.sender, amount);
         }
 
     }
 
-    function finalWithdraw(uint256 offerringAmount, uint256 BNBAmount)
-        external
-        onlyOwner
-    {
-        require(msg.sender == admin, "Launchpad: Only admin can withdraw");
-        require(
-            offerringAmount <= offeringToken.balanceOf(address(this)),
-            "Launchpad: Insufficient balance"
-        );
-        require(
-            BNBAmount <= address(this).balance,
-            "Launchpad: Insufficient balance"
-        );
+    function sendOfferingToken(uint256 _offeringAmount) public {
+        if(!isInitialized) revert NotInitialized();
+        if(msg.sender != admin) revert NotAllowed();
+        // i+f(!offeringToken.balanceOf(address(this)) < _offeringAmount) revert NotEnoughOfferingToken();
+        offeringToken.transfer(msg.sender, _offeringAmount);
+    }
+    
 
-        uint256 BnbBalance = address(this).balance;
-        uint256 LaunchpadShares = (launchPercentShare / 100) * BnbBalance;
-        uint256 projectOwnerShares = BnbBalance - LaunchpadShares;
-        payable(projectOwner).transfer(projectOwnerShares);
-        payable(admin).transfer(LaunchpadShares);
-        offeringToken.transfer(msg.sender, offerringAmount);
+    function finalWithdraw () public {
+        if(!isInitialized) revert NotInitialized();
+        if(msg.sender != admin) revert NotAllowed();
+        if(block.number < EndBlock) revert NotEnded();
+        uint256 offeringTokenAmount = offeringToken.balanceOf(address(this));
+        uint256 launchPadShare = raisedAmount * launchPercentShare / 100;
+        uint256 adminShare = raisedAmount - launchPadShare;
+        payable(admin).transfer(adminShare);
+        payable(projectOwner).transfer(launchPadShare);
+        offeringToken.transfer(msg.sender, offeringTokenAmount);
+        emit FinalWithdraw(admin, adminShare, offeringTokenAmount);
     }
 
-    // allocation 100000 means 0.1(10%), 1 meanss 0.000001(0.0001%), 1000000 means 1(100%)
-    function getUserAllocation(address _user) public view returns (uint256) {
-        return (user[_user].amountDeposited * 1e12) / (raisedAmount / 1e6);
-    }
 
+function getLaunchPadInfo() public view returns (
+        uint256 _offeringAmount,
+        uint256 _raisingAmount,
+        uint256 _tier1Amount,
+        uint256 _tier2Amount,
+        uint256 _minimumRequirementForTier2,
+        uint256 _tier1Percentage,
+        uint256 _tier2Percentage,
+        uint256 _launchPercentShare
+    ) {
+        _offeringAmount = launchPadInfo.offeringAmount;
+        _raisingAmount = launchPadInfo.raisingAmount;
+        _tier1Amount = launchPadInfo.tier1Amount;
+        _tier2Amount = launchPadInfo.tier2Amount;
+        _minimumRequirementForTier2 = launchPadInfo.minimumRequirementForTier2;
+        _tier1Percentage = tier1Percentage;
+        _tier2Percentage = tier2Percentage;
+        _launchPercentShare = launchPercentShare;
+    }
     // get the amount of offering token to be distributed to user
     function getOfferingTokenAmount(address _user)
         public
         view
         returns (uint256)
     {
+        getUserTier(_user);
         return
-            (user[_user].amountDeposited * poolsInfo.offeringAmount) /
-            poolsInfo.raisingAmount;
+            (user[_user].amountDeposited * launchPadInfo.offeringAmount) /
+            launchPadInfo.raisingAmount;
     }
 
-    function hasHarvested(address _user) public view returns (bool) {
+    function hasClaimed(address _user) public view returns (bool) {
         return user[_user].hasClaimed;
     }
 
@@ -250,16 +242,19 @@ contract Launchpad is Ownable {
         return user[_user].userTier;
     }
    function getTier1Amount() public view returns (uint256) {
-        return poolsInfo.tier1Amount;
+        return launchPadInfo.tier1Amount;
     }
     function getUserDeposit() public view returns (uint256) {
         return user[msg.sender].amountDeposited;
     }
     // Calculate amount of offering token to be distributed in tier2
     function getTier2Amount() public view returns (uint256) {
-        return poolsInfo.tier2Amount;
+        return launchPadInfo.tier2Amount;
     }
-
+    
+    function getUserDetails(address _user) public view returns (uint256, uint256, bool, userTiers) {
+        return (user[_user].amountDeposited, getOfferingTokenAmount(_user), user[_user].hasClaimed, user[_user].userTier);
+    }
 
      /**
      * @notice Get current Time
@@ -268,10 +263,7 @@ contract Launchpad is Ownable {
         return block.timestamp;
     }
 
-    receive() external payable {
-        deposit();
-    }
-
+     
     /**
      * @notice It allows the admin to recover wrong tokens sent to the contract
      * @param _tokenAddress: the address of the token to withdraw (18 decimals)
