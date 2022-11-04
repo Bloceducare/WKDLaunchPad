@@ -1,4 +1,5 @@
 pragma solidity ^0.8.0;
+
 import "./utils/IBEP20.sol";
 import "../src/launchpad.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
@@ -20,10 +21,7 @@ contract LaunchpadDeployer is Ownable {
         uint256 _tier2Percentage,
         uint256 _minimumRequirementForTier2
     ) external onlyOwner {
-        require(
-            IBEP20(_offeringToken).totalSupply() > 0,
-            "Invalid token address"
-        );
+        require(IBEP20(_offeringToken).totalSupply() > 0, "Invalid token address");
         require(_startBlock > block.number, "Invalid start block");
         require(_endBlock > _startBlock, "Invalid end block");
         require(_adminAddress != address(0), "Invalid admin address");
@@ -32,12 +30,7 @@ contract LaunchpadDeployer is Ownable {
         bytes32 salt = keccak256(abi.encodePacked(_offeringToken, _startBlock));
         address payable launchpadAddress;
         assembly {
-            launchpadAddress := create2(
-                0,
-                add(bytecode, 32),
-                mload(bytecode),
-                salt
-            )
+            launchpadAddress := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
         Launchpad(launchpadAddress).initialize(
             _offeringToken,
@@ -61,9 +54,7 @@ contract LaunchpadDeployer is Ownable {
      * @dev This function is only callable by admin.
      */
     function recoverWrongTokens(address _tokenAddress) external onlyOwner {
-        uint256 balanceToRecover = IBEP20(_tokenAddress).balanceOf(
-            address(this)
-        );
+        uint256 balanceToRecover = IBEP20(_tokenAddress).balanceOf(address(this));
         require(balanceToRecover > 0, "Operations: Balance must be > 0");
         IBEP20(_tokenAddress).transfer(address(msg.sender), balanceToRecover);
 

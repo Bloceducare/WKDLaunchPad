@@ -21,7 +21,7 @@ contract IFOTest is Test {
 
     function setUp() public {
         mOFF = new MOCKOFF();
-        wkdCommit = new WKDCommit();
+        wkdCommit = new WKDCommit(admin);
         mWKD = new MOCKWAKANDA();
         launchpad = new Launchpad();
         launchpad.initialize(
@@ -43,9 +43,8 @@ contract IFOTest is Test {
         wkdCommit.initialize(address(mWKD));
         vm.stopPrank();
         mOFF.balanceOf(address(launchpad));
-        mOFF.mintAmount(address(launchpad),9000000000);
+        mOFF.mintAmount(address(launchpad), 9000000000);
         mOFF.balanceOf(address(launchpad));
-
     }
 
     function testAdmin() public {
@@ -99,9 +98,9 @@ contract IFOTest is Test {
         mOFF.balanceOf(address(this));
         launchpad.getTier2Amount();
         mOFF.balanceOf(address(this));
-         launchpad.getTier1Amount();
+        launchpad.getTier1Amount();
         launchpad.claimToken();
-    
+
         vm.stopPrank();
         vm.prank(user2);
         launchpad.claimToken();
@@ -110,9 +109,7 @@ contract IFOTest is Test {
     }
 
     function mkaddr(string memory name) public returns (address) {
-        address addr = address(
-            uint160(uint256(keccak256(abi.encodePacked(name))))
-        );
+        address addr = address(uint160(uint256(keccak256(abi.encodePacked(name)))));
         vm.label(addr, name);
         return addr;
     }
