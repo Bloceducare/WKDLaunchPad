@@ -114,14 +114,12 @@ contract Launchpad is Ownable {
         if (isInitialized) revert NotInitialized();
         if (_launchPercentShare > 100) revert InvalidPercentage();
         if (_tier2Percentage > 100) revert InvalidPercentage();
-        if(_offeringToken == address(0)) revert InvalidAddress();
-        if(_adminAddress == address(0)) revert InvalidAddress();
-        if(_projectOwner == address(0)) revert InvalidAddress();
-        if(_wkdCommit == address(0)) revert InvalidAddress();
-        if(_startBlock <= block.timestamp) revert InvalidTime();
-        if(_endBlock <= _startBlock) revert InvalidTime();
-        
-
+        if (_offeringToken == address(0)) revert InvalidAddress();
+        if (_adminAddress == address(0)) revert InvalidAddress();
+        if (_projectOwner == address(0)) revert InvalidAddress();
+        if (_wkdCommit == address(0)) revert InvalidAddress();
+        if (_startBlock <= block.timestamp) revert InvalidTime();
+        if (_endBlock <= _startBlock) revert InvalidTime();
 
         launchPadInfo.offeringAmount = _offeringAmount;
         launchPadInfo.raisingAmount = _raisingAmount;
@@ -159,7 +157,7 @@ contract Launchpad is Ownable {
         }
         participants.push(msg.sender);
         user[msg.sender].amountDeposited = user[msg.sender].amountDeposited + msg.value;
-       raisedAmount += msg.value;
+        raisedAmount += msg.value;
         emit Deposit(msg.sender, msg.value);
     }
 
