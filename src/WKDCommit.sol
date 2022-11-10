@@ -46,7 +46,7 @@ contract WKDCommit {
         if (_amount == 0) revert InvalidAmount();
         userCommit[msg.sender] += _amount;
         totalusersCommit += _amount;
-        wkd.safeTransferFrom(msg.sender, address(this), _amount);
+        wkd.transferFrom(msg.sender, address(this), _amount);
         emit Commit(msg.sender, _amount);
     }
 

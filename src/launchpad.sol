@@ -5,7 +5,7 @@ import "./WKDCommit.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract Launchpad is Ownable {
-    // The offering token
+    // // The offering token
     IBEP20 offeringToken;
     // check initialized
     bool public isInitialized;
@@ -13,8 +13,6 @@ contract Launchpad is Ownable {
     uint256 public StartBlock;
     // The block number when the IFO ends
     uint256 public EndBlock;
-    // Total amount of offering token to be distributed
-    uint256 public totalTokensOffered;
     // pecrcentage of offering token to be distributed for tier 1
     uint256 public tier1Percentage;
     // pecrcentage of offering token to be distributed for tier 2
@@ -36,8 +34,6 @@ contract Launchpad is Ownable {
     struct LaunchpadDetails {
         // amount to be raised in BNB
         uint256 raisingAmount;
-        // offerinn token
-        address offeringToken;
         // amount of offering token to be offered in the pool
         uint256 offeringAmount;
         // amount of WKD commit for tier2
@@ -98,6 +94,8 @@ contract Launchpad is Ownable {
     error NotDeposited();
     error NoWKDCommit();
     error NotEnoughOfferingToken();
+    error InvalidAddress();
+    error InvalidTime();
 
     function initialize(
         address _offeringToken,
@@ -116,13 +114,22 @@ contract Launchpad is Ownable {
         if (isInitialized) revert NotInitialized();
         if (_launchPercentShare > 100) revert InvalidPercentage();
         if (_tier2Percentage > 100) revert InvalidPercentage();
+        if(_offeringToken == address(0)) revert InvalidAddress();
+        if(_adminAddress == address(0)) revert InvalidAddress();
+        if(_projectOwner == address(0)) revert InvalidAddress();
+        if(_wkdCommit == address(0)) revert InvalidAddress();
+        if(_startBlock <= block.timestamp) revert InvalidTime();
+        if(_endBlock <= _startBlock) revert InvalidTime();
+        
+
+
         launchPadInfo.offeringAmount = _offeringAmount;
         launchPadInfo.raisingAmount = _raisingAmount;
         launchPercentShare = _launchPercentShare;
         launchPadInfo.minimumRequirementForTier2 = _minimumRequirementForTier2;
         tier2Percentage = _tier2Percentage;
         tier1Percentage = 100 - _tier2Percentage;
-        launchPadInfo.tier2Amount = _offeringAmount * (_tier2Percentage);
+        launchPadInfo.tier2Amount = _offeringAmount * (_tier2Percentage) / 100;
         launchPadInfo.tier1Amount = (_offeringAmount * (100 - _tier2Percentage)) / 100;
 
         offeringToken = IBEP20(_offeringToken);
@@ -150,10 +157,9 @@ contract Launchpad is Ownable {
         } else {
             user[msg.sender].userTier = userTiers.Tier1;
         }
-        user[msg.sender].amountDeposited += msg.value;
         participants.push(msg.sender);
         user[msg.sender].amountDeposited = user[msg.sender].amountDeposited + msg.value;
-        raisedAmount = raisedAmount += msg.value;
+       raisedAmount += msg.value;
         emit Deposit(msg.sender, msg.value);
     }
 

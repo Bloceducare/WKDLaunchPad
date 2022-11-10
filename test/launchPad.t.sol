@@ -38,7 +38,7 @@ contract IFOTest is Test {
             400
         );
         vm.startPrank(admin);
-        mWKD.mintToUser();
+        // mWKD.get();
         mWKD.approve(address(admin), 1000000e9);
         wkdCommit.initialize(address(mWKD));
         vm.stopPrank();
@@ -61,7 +61,7 @@ contract IFOTest is Test {
         vm.startPrank(user1);
         vm.roll(4 days);
         mWKD.approve(address(wkdCommit), 1000000e9);
-        mWKD.mintToUser();
+        mWKD.get();
 
         wkdCommit.commitWkd(1000e9);
         wkdCommit.getUserCommit(user1);
@@ -76,7 +76,7 @@ contract IFOTest is Test {
         vm.startPrank(user2);
         // vm.roll(3 days);
         mWKD.approve(address(wkdCommit), 1000000e9);
-        mWKD.mintToUser();
+        mWKD.get();
 
         wkdCommit.commitWkd(1000e9);
         wkdCommit.getUserCommit(user1);
