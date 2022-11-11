@@ -48,6 +48,10 @@ contract Launchpad is Ownable {
         uint256 tier1Amount;
         // amount of offering token to be shared in tier2
         uint256 tier2Amount;
+         // Max BNB amount allowed for tier1
+        uint256 tier1MaxBNB;
+        // Max BNB amount allowed for tier2
+        uint256 tier2MaxBNB;
     }
 
     enum userTiers {
@@ -96,7 +100,16 @@ contract Launchpad is Ownable {
     error NotEnoughOfferingToken();
     error InvalidAddress();
     error InvalidTime();
+    error AboveLimit();
 
+    constructor(uint256 _tier1MaxBNB, uint256 _tier2MaxBNB) {
+        launchPadInfo.tier1MaxBNB = _tier1MaxBNB;
+        launchPadInfo.tier2MaxBNB = _tier2MaxBNB;
+    }
+    // function setUserLimit() external onlyOwner {
+    //     launchPadInfo.tier1MaxBNB = _tier1MaxBNB;
+    //     launchPadInfo.tier2MaxBNB = _tier2MaxBNB;
+    // }
     function initialize(
         address _offeringToken,
         uint256 _startBlock,
@@ -109,6 +122,7 @@ contract Launchpad is Ownable {
         uint256 _launchPercentShare,
         uint256 _tier2Percentage,
         uint256 _minimumRequirementForTier2
+
     ) public {
         if (msg.sender != owner()) revert NotPermitted();
         if (isInitialized) revert NotInitialized();
@@ -151,8 +165,10 @@ contract Launchpad is Ownable {
         if (userCommit == 0) revert NoWKDCommit();
         if (msg.value == 0) revert NotEnoughAmount();
         if (userCommit >= launchPadInfo.minimumRequirementForTier2) {
+            if(msg.value > launchPadInfo.tier2MaxBNB) revert AboveLimit();
             user[msg.sender].userTier = userTiers.Tier2;
         } else {
+            if(msg.value > launchPadInfo.tier1MaxBNB) revert AboveLimit();
             user[msg.sender].userTier = userTiers.Tier1;
         }
         participants.push(msg.sender);

@@ -23,7 +23,7 @@ contract IFOTest is Test {
         mOFF = new MOCKOFF();
         wkdCommit = new WKDCommit(admin);
         mWKD = new MOCKWAKANDA();
-        launchpad = new Launchpad();
+        launchpad = new Launchpad(0.000003 ether,0.007 ether );
         launchpad.initialize(
             address(mOFF),
             block.timestamp + 2 days,
@@ -36,6 +36,8 @@ contract IFOTest is Test {
             4,
             40,
             400
+
+
         );
         vm.startPrank(admin);
         // mWKD.get();

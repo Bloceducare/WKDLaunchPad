@@ -44,6 +44,7 @@ contract LaunchpadDeployer is Ownable {
             _launchPercentShare,
             _tier2Percentage,
             _minimumRequirementForTier2
+
         );
         emit NewIFOContract(launchpadAddress);
     }
