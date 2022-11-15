@@ -49,7 +49,7 @@ contract IFOTest is Test {
 
     function testAdmin() public {
         vm.startPrank(admin);
-        mOFF.mintToUser(admin);
+        mOFF.get();
         mOFF.approve(address(launchpad), 1000000e18);
         // launchpad.sendOfferingToken(9000000000);
 

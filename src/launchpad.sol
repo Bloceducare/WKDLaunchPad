@@ -6,7 +6,7 @@ import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract Launchpad is Ownable {
     // // The offering token
-    IBEP20 offeringToken;
+    IBEP20 public offeringToken;
     // check initialized
     bool public isInitialized;
     // The block number when the IFO starts
@@ -38,12 +38,6 @@ contract Launchpad is Ownable {
         uint256 offeringAmount;
         // amount of WKD commit for tier2
         uint256 minimumRequirementForTier2;
-        // launchpad start time
-        uint256 launchpadStartTime;
-        // launchpad end time
-        uint256 launchpadEndTime;
-        // Total amount in pool
-        uint256 totalAmountInPool;
         // amount of offering token to be shared in tier1
         uint256 tier1Amount;
         // amount of offering token to be shared in tier2
@@ -118,7 +112,7 @@ contract Launchpad is Ownable {
         if (_adminAddress == address(0)) revert InvalidAddress();
         if (_projectOwner == address(0)) revert InvalidAddress();
         if (_wkdCommit == address(0)) revert InvalidAddress();
-        if (_startBlock <= block.timestamp) revert InvalidTime();
+        if (_startBlock <= block.number) revert InvalidTime();
         if (_endBlock <= _startBlock) revert InvalidTime();
 
         launchPadInfo.offeringAmount = _offeringAmount;
